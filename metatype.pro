@@ -27,7 +27,11 @@ HEADERS += extensions/extensions.h \
            extensions/streams.h \
            extensions/name.h \
 
-QMAKE_CXXFLAGS += -std=c++17
-CONFIG += sanitizer sanitize_address sanitize_undefined
-LIBS += -ldl
-QMAKE_LFLAGS += -rdynamic
+CONFIG += c++17 sanitizer sanitize_address sanitize_undefined
+
+msvc {
+    CONFIG += console
+} else {
+    LIBS += -ldl
+    QMAKE_LFLAGS += -rdynamic
+}

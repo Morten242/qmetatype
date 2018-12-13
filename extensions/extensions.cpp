@@ -72,7 +72,9 @@ template<> N::TypeId N::qTypeId<N::Extensions::Name_hash, N::Extensions::Name_ha
 
 void N::Extensions::ExtensionBase::warnAboutFailedCall(TypeId extensionId, TypeId id)
 {
+#ifndef Q_CC_MSVC
     auto extensionName = Name_dlsym::name(extensionId);
     qWarning() << QLatin1String("WARN Requested metatype extension ") + extensionName + QLatin1String(" is not registed for this type:")
                   << id;
+#endif
 }

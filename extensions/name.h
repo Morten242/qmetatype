@@ -39,7 +39,9 @@
 
 #pragma once
 #include <string_view>
+#ifndef Q_CC_MSVC
 #include <dlfcn.h>
+#endif
 #include "extensions.h"
 
 /*!
@@ -87,14 +89,67 @@ namespace N::Extensions
 {
     namespace P
     {
+#ifdef Q_CC_MSVC
+        /*!
+            \internal
+            Return the type, still has the qt namespace and denominator in front (class,
+            struct, enum).
+        */
+        template<class QtTypeToIntrospect> constexpr std::string_view getTypeName_()
+        {
+                constexpr size_t offset = sizeof("class std::basic_string_view<char,struct "
+                                            "std::char_traits<char> > __cdecl "
+                                            "N::Extensions::P::typeNameNoDenominator_<") - 1;
+                constexpr size_t length = sizeof(__FUNCSIG__) - offset - (sizeof(">(void)"));
+                constexpr std::string_view name(__FUNCSIG__ + offset, length);
+                return name;
+        }
+#endif
+
         template<class QtTypeToIntrospect> constexpr std::string_view typeNameFromType_()
         {
+#ifndef Q_CC_MSVC
             constexpr size_t offset = sizeof("constexpr std::string_view N::Extensions::P::typeNameFromType() [with QtTypeToIntrospect = ");
             constexpr size_t tail = sizeof("; std::string_view = std::basic_string_view<char>]");
             constexpr size_t len = sizeof(__PRETTY_FUNCTION__);
             // TODO As for gcc this code is storing the full signature in the code because, we really would need to shorten the name or find another
             // way to cut the size, maybe a trick with const char [] could help? For others ensure it is compile time.
             return std::string_view{__PRETTY_FUNCTION__ + offset, len - offset - tail};
+#else // msvc
+
+            constexpr auto strippedName = []() constexpr {
+                using namespace std::literals::string_view_literals;
+                constexpr auto name = getTypeName_<QtTypeToIntrospect>();
+                /// CLASS
+                constexpr auto classView = "class "sv;
+                if constexpr (name.size() > classView.size()
+                              && name.compare(0, classView.size(), classView) == 0) {
+                    return name.substr(classView.size());
+                }
+                /// STRUCT
+                constexpr auto structView = "struct "sv;
+                if constexpr (name.size() > structView.size()
+                              && name.compare(0, structView.size(), structView) == 0) {
+                    return name.substr(structView.size());
+                }
+                /// ENUM
+                constexpr auto enumView = "enum "sv;
+                if constexpr (name.size() > enumView.size()
+                              && name.compare(0, enumView.size(), enumView) == 0) {
+                    return name.substr(enumView.size());
+                }
+                return name;
+            }();
+
+            /// NAMESPACE
+            constexpr std::string_view qtNamespace(QT_STRINGIFY(QT_NAMESPACE) "::");
+            if constexpr (qtNamespace.size() > sizeof("::")
+                          && strippedName.compare(0, qtNamespace.size(), qtNamespace) == 0) {
+                return strippedName.substr(qtNamespace.size());
+            }
+
+            return strippedName;
+#endif
         }
 
         template<class T> QString typeNameFromType()
@@ -130,6 +185,7 @@ namespace N::Extensions
 *     - It is hard to find mangling function (demangling is there, but we would need to do the opposite)
 *     - May not work with typedefs
 */
+#ifndef Q_CC_MSVC
 struct Name_dlsym: public Ex<Name_dlsym>
 {
     enum Operations {GetName, RegisterAlias};
@@ -185,6 +241,7 @@ struct Name_dlsym: public Ex<Name_dlsym>
         return nullptr;
     }
 };
+#endif
 
 /*!
 * \brief The Name_hash struct

@@ -69,10 +69,30 @@ struct RuntimeData: N::P::TypeIdData
     std::tuple<N::Extensions::Name_hash::RuntimeData, N::Extensions::Allocation::RuntimeData> extensions;
 };
 
+enum MyEnum {
+    Value = 200
+};
+
+enum class MyEnumClass : quint64 {
+    Value = 200
+};
+
 int main(int argc, char** argv)
 {
     Q_UNUSED(argc);
     Q_UNUSED(argv);
+    {
+        auto intId = N::qTypeId<MyEnum>();
+        qDebug() << "Succesfull geting type id of MyEnum:" << intId;
+    }
+    {
+        auto intId = N::qTypeId<MyEnumClass>();
+        qDebug() << "Succesfull geting type id of MyEnumClass:" << intId;
+    }
+    {
+        auto intId = N::qTypeId<QString>();
+        qDebug() << "Succesfull geting type id of QString:" << intId;
+    }
 
     // Check basic extensions on a primitive type
     qDebug() << "----------------Int--------------------------";
@@ -97,7 +117,9 @@ int main(int argc, char** argv)
     qDebug() << "----------------QString--------------------------";
     {
         auto qstringId = N::qTypeId<QString>();
+#ifndef Q_CC_MSVC
         qDebug() << "Succesfull geting type id of QString:" << qstringId << "as named type" << N::Extensions::Name_dlsym::name(qstringId);
+#endif
         qDebug() << "sizeof(QString):" << sizeof(QString) << "while metatype says that the size is:" << N::Extensions::Allocation::sizeOf(qstringId);
         qDebug() << "alignof(QString):" << alignof(QString) << "while metatype says that the align is:" << N::Extensions::Allocation::alignOf(qstringId);
         QString stringCopy = QLatin1String("String");
@@ -106,6 +128,7 @@ int main(int argc, char** argv)
         qDebug() << "create(QString):" << *string;
     }
 
+#ifndef Q_CC_MSVC
     // [BROKEN] Plays with pre-registration. With dlsym we can call qTypeId lazily
     qDebug() << "----------------Unsigned int--------------------------";
     {
@@ -115,6 +138,7 @@ int main(int argc, char** argv)
         qDebug() << "All ids are in sync:" << (uintId == preRegistrationIntId);
         qDebug() << "Unsigned int by default is known as:" << N::Extensions::Name_dlsym::name(uintId);
     }
+#endif
 
     // Check name extension on a type
     qDebug() << "----------------Char--------------------------";

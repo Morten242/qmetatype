@@ -107,7 +107,11 @@ TypeId qTypeId()
     if constexpr (!bool(sizeof...(Extensions))) {
         // Register default stuff, Qt should define minimal useful set, DataStream is probably not in :-)
         // Every usage of metatype can call qTypeId with own minimal set of extensions.
+#ifndef Q_CC_MSVC
         return qTypeId<T, N::Extensions::Allocation, N::Extensions::DataStream, N::Extensions::Name_dlsym, N::Extensions::Name_hash>();
+#else // msvc
+        return qTypeId<T, N::Extensions::Allocation, N::Extensions::DataStream, N::Extensions::Name_hash>();
+#endif
     }
     (Extensions::template PreRegisterAction<T>(), ...);
     using ExtendedTypeIdData = N::P::TypeIdDataExtended<sizeof...(Extensions) + 1>;
@@ -128,7 +132,11 @@ inline void Extensions::Ex<Extension>::Call(TypeId id, quint8 operation, size_t 
 {
     if (!id->call(typeId(), operation, argc, argv)) {
         // TODO Think when we need the warning, sometimes we want just to probe if it is possible to do stuff
+#ifndef Q_CC_MSVC
         warnAboutFailedCall(qTypeId<Extension, Name_dlsym>(), id);
+#else // msvc
+        // warnAboutFailedCall(qTypeId<Extension, Name_function_hack>(), id);
+#endif
     }
 }
 
